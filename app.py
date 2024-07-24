@@ -1,6 +1,13 @@
 import hmac
+
+import pandas as pd
 import streamlit as st
-from functions import fetch_probs_from_datagolf, update_workbook_probability_table
+from functions import (
+    fetch_probs_from_datagolf,
+    update_workbook_probability_table,
+    fetch_best_odds,
+    update_workbook_best_odds
+)
 
 
 def check_password():
@@ -31,21 +38,46 @@ if not check_password():
     st.stop()  # Do not continue if check_password is not True.
 
 
-file_name = 'Auction Valuations v1.xlsx'
+file_name = 'Auction Valuations v2.xlsx'
 
 
-def refresh_and_download_workbook():
-    df_probs = fetch_probs_from_datagolf()
-    update_workbook_probability_table(df_probs, file_name=file_name)
+def refresh_whole_new_workbook():
+    update_workbook_probability_table(fetch_probs_from_datagolf(), file_name=file_name)
+    update_workbook_best_odds(file_name, fetch_best_odds())
 
 
 st.title('Calcutta Auction Valuation')
 
-with open(file_name, "rb") as template_file:
-    refresh_and_download_workbook()
-    template_byte = template_file.read()
+st.markdown('## Pre-auction')
+st.markdown('### Download New Workbook')
+st.markdown('Should ideally by downloaded right before auction so that probabilities are most up-to-date.')
+if st.button('Fetch Field Probabilities'):
+    st.success('You may now download the workbook.')
+    with open(file_name, "rb") as file:
+        refresh_whole_new_workbook()
+        file_byte = file.read()
 
-    st.download_button(label="Download Workbook",
-                       data=template_byte,
-                       file_name=f"{file_name}",
-                       mime='application/octet-stream')
+        st.download_button(label="Download Pre-Auction Workbook",
+                           data=file_byte,
+                           file_name=f"{file_name}",
+                           mime='application/octet-stream')
+
+st.markdown('---')
+st.markdown('## Updates')
+auction_workbook = st.file_uploader("Select in-progress workbook", type="xlsx")
+st.markdown('### Update Best Odds tab')
+if auction_workbook is not None:
+    df_wb = pd.ExcelFile(auction_workbook)
+
+    with open(file_name, "rb") as file:
+        update_workbook_best_odds(df_wb, fetch_best_odds())
+        file_byte = file.read()
+
+        st.download_button(label="Fetch Latest Odds",
+                           data=file_byte,
+                           file_name=f"{auction_workbook.name}",
+                           mime='application/octet-stream')
+else:
+    st.warning("Please load existing auction workbook. For a brand new workbook with latest odds, "
+               "simply download a new pre-auction workbook.")
+

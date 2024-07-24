@@ -83,3 +83,40 @@ def update_workbook_probability_table(df: pd.DataFrame, file_name: str = 'Auctio
     with pd.ExcelWriter(file_name, mode='a', if_sheet_exists='replace') as xl:
         df.to_excel(xl, sheet_name='Probability Table')
 
+
+def fetch_best_odds(
+        markets: List[str] = ['win', 'top_5', 'top_10', 'top_20', 'frl', 'mc', 'make_cut']
+) -> pd.DataFrame:
+    dfs = []
+
+    for market in markets:
+        url = f'https://feeds.datagolf.com/betting-tools/outrights?tour=pga&market={market}&file_format=csv&odds_format=american&key=9d8451cdbdf7bcbbe0a0270ab308'
+
+        df = pd.read_csv(url)
+        if df.shape[0] <= 1:
+            continue
+
+        df['market'] = 'miss_cut' if market == 'mc' else market
+
+        drop_cols = [
+            'datagolf_baseline',
+            'datagolf_base_history_fit',
+            'dg_id',
+            'last_updated'
+        ]
+        df = df[[c for c in df.columns if c not in drop_cols]]
+
+        dfs.append(df.set_index(['event_name', 'market', 'player_name']))
+
+    df = pd.concat(dfs).reset_index()
+    numeric_cols = df.select_dtypes(include='number').columns
+    df = df.style.apply(
+        lambda x: ['background-color: green' if v == x.max() else '' for v in x],
+        subset=numeric_cols,
+        axis=1
+    )
+    return df
+
+def update_workbook_best_odds(workbook, df):
+    with pd.ExcelWriter(workbook, mode='a', if_sheet_exists='replace') as xl:
+        df.to_excel(xl, sheet_name='Best Odds', index=False)
