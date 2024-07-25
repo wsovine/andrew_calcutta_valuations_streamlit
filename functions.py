@@ -7,7 +7,7 @@ from typing import List
 
 def get_odds_cols(df: pd.DataFrame, exclusions: list = []):
     df = df[[c for c in df.columns if c not in exclusions]]
-    return df.select_dtypes(include=[np.float_])
+    return df.select_dtypes(include=[np.float64])
 
 
 def remove_vig(df: pd.DataFrame, market):
