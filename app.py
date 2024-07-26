@@ -67,14 +67,11 @@ st.markdown('## Updates')
 auction_workbook = st.file_uploader("Select in-progress workbook", type="xlsx")
 st.markdown('### Update Best Odds tab')
 if auction_workbook is not None:
-    df_wb = pd.ExcelFile(auction_workbook)
-
-    with open(file_name, "rb") as file:
-        update_workbook_best_odds(df_wb, fetch_best_odds())
-        file_byte = file.read()
+    with pd.ExcelFile(auction_workbook) as xl:
+        update_workbook_best_odds(xl, fetch_best_odds())
 
         st.download_button(label="Fetch Latest Odds",
-                           data=file_byte,
+                           data=xl.io.getvalue(),
                            file_name=f"{auction_workbook.name}",
                            mime='application/octet-stream')
 else:

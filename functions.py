@@ -110,7 +110,7 @@ def fetch_best_odds(
 
     df = pd.concat(dfs).reset_index()
     numeric_cols = df.select_dtypes(include='number').columns
-    df.style.apply(
+    df = df.style.apply(
         lambda x: ['background-color: green' if v == x.max() else '' for v in x],
         subset=numeric_cols,
         axis=1,
