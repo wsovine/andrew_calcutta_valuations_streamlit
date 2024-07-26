@@ -110,12 +110,13 @@ def fetch_best_odds(
 
     df = pd.concat(dfs).reset_index()
     numeric_cols = df.select_dtypes(include='number').columns
-    df = df.style.apply(
+    df.style.apply(
         lambda x: ['background-color: green' if v == x.max() else '' for v in x],
         subset=numeric_cols,
-        axis=1
+        axis=1,
     )
     return df
+
 
 def update_workbook_best_odds(workbook, df):
     with pd.ExcelWriter(workbook, mode='a', if_sheet_exists='replace') as xl:
