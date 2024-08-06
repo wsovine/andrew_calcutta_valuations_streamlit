@@ -65,6 +65,8 @@ if auction_bids is not None:
                            data=file_byte,
                            file_name=f"{file_name}",
                            mime='application/octet-stream')
+else:
+    st.warning("Please load export from auction site.")
 
 st.markdown('---')
 st.markdown('## Updates After Auction')
