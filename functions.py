@@ -86,7 +86,8 @@ def update_workbook_probability_table(df: pd.DataFrame, file_name: str = 'Auctio
 
 
 def fetch_best_odds(
-        markets: List[str] = ['win', 'top_5', 'top_10', 'top_20', 'frl', 'mc', 'make_cut']
+        markets: List[str] = ['win', 'top_5', 'top_10', 'top_20', 'frl', 'mc', 'make_cut'],
+        books: List[str] = ['caesars', 'draftkings', 'fanduel', 'bet365', 'betmgm']
 ) -> pd.DataFrame:
     dfs = []
 
@@ -99,13 +100,8 @@ def fetch_best_odds(
 
         df['market'] = 'miss_cut' if market == 'mc' else market
 
-        drop_cols = [
-            'datagolf_baseline',
-            'datagolf_base_history_fit',
-            'dg_id',
-            'last_updated'
-        ]
-        df = df[[c for c in df.columns if c not in drop_cols]]
+        keep_cols = ['event_name', 'market', 'player_name'] + books
+        df = df[[c for c in df.columns if c in keep_cols]]
 
         dfs.append(df.set_index(['event_name', 'market', 'player_name']))
 
