@@ -6,7 +6,9 @@ from functions import (
     fetch_probs_from_datagolf,
     update_workbook_probability_table,
     fetch_best_odds,
-    update_workbook_best_odds
+    update_workbook_best_odds,
+    read_auction_bid_export,
+    update_workbook_auction_table,
 )
 
 
@@ -38,23 +40,25 @@ if not check_password():
     st.stop()  # Do not continue if check_password is not True.
 
 
-file_name = 'Auction Valuations v2.xlsx'
+file_name = 'Auction Valuations v3.xlsx'
 
 
-def refresh_whole_new_workbook():
+def refresh_whole_new_workbook(auction_bid_export: pd.DataFrame):
     update_workbook_probability_table(fetch_probs_from_datagolf(), file_name=file_name)
     update_workbook_best_odds(file_name, fetch_best_odds())
+    update_workbook_auction_table(file_name, auction_bid_export)
 
 
 st.title('Calcutta Auction Valuation')
 
-st.markdown('## Pre-auction')
+st.markdown('## Before or During Auction')
 st.markdown('### Download New Workbook')
-st.markdown('Should ideally by downloaded right before auction so that probabilities are most up-to-date.')
-if st.button('Fetch Field Probabilities'):
-    st.success('You may now download the workbook.')
+auction_bids = st.file_uploader("Load export from auction site", type="xlsx")
+if auction_bids is not None:
+    # st.success('You may now download the workbook.')
+    df_bid_export = read_auction_bid_export(auction_bids)
     with open(file_name, "rb") as file:
-        refresh_whole_new_workbook()
+        refresh_whole_new_workbook(df_bid_export)
         file_byte = file.read()
 
         st.download_button(label="Download Pre-Auction Workbook",
@@ -63,7 +67,7 @@ if st.button('Fetch Field Probabilities'):
                            mime='application/octet-stream')
 
 st.markdown('---')
-st.markdown('## Updates')
+st.markdown('## Updates After Auction')
 auction_workbook = st.file_uploader("Select in-progress workbook", type="xlsx")
 st.markdown('### Update Best Odds tab')
 if auction_workbook is not None:

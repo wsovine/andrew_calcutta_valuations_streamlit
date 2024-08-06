@@ -3,6 +3,7 @@ import numpy as np
 import re
 import streamlit as st
 from typing import List
+from rapidfuzz import fuzz, process
 
 
 def get_odds_cols(df: pd.DataFrame, exclusions: list = []):
@@ -121,3 +122,54 @@ def fetch_best_odds(
 def update_workbook_best_odds(workbook, df):
     with pd.ExcelWriter(workbook, mode='a', if_sheet_exists='replace') as xl:
         df.to_excel(xl, sheet_name='Best Odds', index=False)
+
+
+def convert_name_format(name):
+    first, last = name.split(' ', 1)
+    formatted_name = f"{last}, {first}"
+    return formatted_name
+
+
+def fuzzy_merge(df1, df2, key1, key2, threshold=80, limit=2):
+    """
+    df1, df2: DataFrames to be merged
+    key1, key2: keys to merge on
+    threshold: how close the matches should be to return a match, based on Levenshtein distance
+    limit: maximum number of matches to return
+    """
+    s = df2[key2].tolist()
+
+    matches = df1[key1].apply(lambda x: process.extract(x, s, limit=limit, scorer=fuzz.token_sort_ratio))
+    # Create a DataFrame from matches
+    matched_df = pd.DataFrame(matches.tolist(), index=df1.index)
+    matched_df = matched_df.stack().reset_index(level=1, drop=True)
+    matched_df = pd.DataFrame(matched_df.tolist(), index=matched_df.index, columns=['match', 'score', 'index'])
+
+    # Filter matches with score above the threshold
+    matched_df = matched_df[matched_df['score'] >= threshold]
+
+    # Join the matched DataFrame with the original DataFrame
+    df1 = df1.join(matched_df)
+    df1 = df1.merge(df2, left_on='match', right_on=key2, how='left', suffixes=('', ' Match'))
+    df1.drop(['match', 'score'], axis=1, inplace=True)
+
+    return df1
+
+
+def read_auction_bid_export(xl_file) -> pd.DataFrame:
+    df = pd.read_excel(xl_file, header=None, names=['Name', 'Price', 'Time', 'Bidder', 'Bid'])
+    return df
+
+
+def update_workbook_auction_table(file_name: str, auction_bid_export: pd.DataFrame):
+    valuations_names = pd.read_excel(file_name, sheet_name='Probability Table', usecols='B', header=None, names=['Name'])
+
+    auction_bid_export['Name Converted'] = auction_bid_export['Name'].apply(convert_name_format)
+    df = fuzzy_merge(auction_bid_export, valuations_names, 'Name Converted', 'Name')
+
+    df.dropna(subset=['Time'], inplace=True)
+    df.drop_duplicates(inplace=True)
+    df = df[['Name', 'Name Match', 'Price', 'Time', 'Bidder', 'Bid']]
+
+    with pd.ExcelWriter(file_name, mode='a', if_sheet_exists='replace') as xl:
+        df.to_excel(xl, sheet_name='Auction Table', index=False)
